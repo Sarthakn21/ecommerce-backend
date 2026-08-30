@@ -2,6 +2,7 @@ package com.sarthak.ecommerce.product.service;
 
 import com.sarthak.ecommerce.product.dto.ProductRequest;
 import com.sarthak.ecommerce.product.dto.ProductResponse;
+import com.sarthak.ecommerce.product.exception.ProductNotFoundException;
 import com.sarthak.ecommerce.product.model.Product;
 import com.sarthak.ecommerce.product.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +24,7 @@ public class ProductService {
     }
 
     public ProductResponse getProductById(String id){
-        Product product= productRepository.findById(id).orElseThrow(()-> new RuntimeException("Product not found"));
+        Product product= productRepository.findById(id).orElseThrow(()->new ProductNotFoundException(id));
         return mapToResponse(product);
     }
 
@@ -44,7 +45,7 @@ public class ProductService {
 
     public ProductResponse updateProduct(String id, ProductRequest request){
         Product oldProduct = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ProductNotFoundException(id));
 
         oldProduct.setName(request.getName());
         oldProduct.setDescription(request.getDescription());
@@ -60,7 +61,7 @@ public class ProductService {
 
     public String deleteProduct(String id){
 
-        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        Product product = productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException(id));
         productRepository.delete(product);
         return "Product with id "+id+" deleted successfully";
     }
