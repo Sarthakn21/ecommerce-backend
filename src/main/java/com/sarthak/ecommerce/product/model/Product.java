@@ -26,5 +26,9 @@ public class Product {
 
     private String imageUrl;
 
+    private BigDecimal averageRating = BigDecimal.ZERO;
+
+    private Integer reviewCount = 0;
+
     private LocalDateTime createdAt;
 }
