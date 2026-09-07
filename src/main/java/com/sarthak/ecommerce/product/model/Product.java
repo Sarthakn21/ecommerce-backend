@@ -34,5 +34,7 @@ public class Product {
 
     private Integer reviewCount = 0;
 
+    private String sellerId;
+
     private LocalDateTime createdAt;
 }
