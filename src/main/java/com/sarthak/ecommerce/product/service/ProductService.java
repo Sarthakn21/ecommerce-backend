@@ -6,21 +6,22 @@ import com.sarthak.ecommerce.product.dto.ProductResponse;
 import com.sarthak.ecommerce.product.exception.ProductNotFoundException;
 import com.sarthak.ecommerce.product.model.Product;
 import com.sarthak.ecommerce.product.repository.ProductRepository;
+import com.sarthak.ecommerce.product.util.ProductUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class ProductService {
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private ProductUtil productUtil;
 
     public PageResponse<ProductResponse> getAllProducts(Pageable pageable) {
         Page<Product> productPage = productRepository.findAll(pageable);
@@ -52,6 +53,9 @@ public class ProductService {
         product.setImageUrl(request.getImageUrl());
         product.setAverageRating(BigDecimal.ZERO);
         product.setReviewCount(0);
+        if (!productUtil.isAdmin()) {
+            product.setSellerId(productUtil.getAuthenticatedUserId());
+        }
         product.setCreatedAt(LocalDateTime.now());
         Product savedProduct = productRepository.save(product);
 
@@ -61,6 +65,8 @@ public class ProductService {
     public ProductResponse updateProduct(String id, ProductRequest request){
         Product oldProduct = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(id));
+
+        productUtil.verifyProductOwnership(oldProduct);
 
         oldProduct.setName(request.getName());
         oldProduct.setDescription(request.getDescription());
@@ -77,6 +83,7 @@ public class ProductService {
     public String deleteProduct(String id){
 
         Product product = productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException(id));
+        productUtil.verifyProductOwnership(product);
         productRepository.delete(product);
         return "Product with id "+id+" deleted successfully";
     }
@@ -93,6 +100,7 @@ public class ProductService {
         response.setImageUrl(product.getImageUrl());
         response.setAverageRating(product.getAverageRating());
         response.setReviewCount(product.getReviewCount());
+        response.setSellerId(product.getSellerId());
         response.setCreatedAt(product.getCreatedAt());
 
         return response;
@@ -122,4 +130,6 @@ public class ProductService {
                 responsePage.getContent());
 
     }
+
+
 }

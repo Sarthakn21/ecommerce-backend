@@ -16,5 +16,6 @@ public class ProductResponse {
     private String imageUrl;
     private BigDecimal averageRating;
     private Integer reviewCount;
+    private String sellerId;
     private LocalDateTime createdAt;
 }
