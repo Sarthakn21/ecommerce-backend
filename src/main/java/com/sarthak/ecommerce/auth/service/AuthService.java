@@ -36,7 +36,7 @@ public class AuthService {
             );
         }
 
-        if (request.role() == Role.Admin) {
+        if (request.role() == Role.ADMIN) {
             throw new ApiException(
                     HttpStatus.BAD_REQUEST,
                     "Admin registration is not allowed"

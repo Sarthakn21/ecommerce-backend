@@ -53,8 +53,25 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/products/**")
                         .hasAnyRole("SELLER", "ADMIN")
 
-                        // Everything else requires authentication
+                        // Only admins can see all users
+                        .requestMatchers(HttpMethod.GET, "/api/users")
+                        .hasRole("ADMIN")
+
+                        // Authenticated users can access a specific user
+                        .requestMatchers(HttpMethod.GET, "/api/users/**")
+                        .authenticated()
+
+                        // Authenticated users can update a specific user
+                        .requestMatchers(HttpMethod.PUT, "/api/users/**")
+                        .authenticated()
+
+                        // Authenticated users can delete a specific user
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/**")
+                        .authenticated()
+
                         .anyRequest().authenticated()
+
+
                 );
 
         return http.build();

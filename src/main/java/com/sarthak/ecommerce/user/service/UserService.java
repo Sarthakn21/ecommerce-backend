@@ -10,6 +10,7 @@ import com.sarthak.ecommerce.user.exception.UserNotFoundException;
 import com.sarthak.ecommerce.user.model.Role;
 import com.sarthak.ecommerce.user.model.User;
 import com.sarthak.ecommerce.user.repository.UserRepository;
+import com.sarthak.ecommerce.user.util.UserUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,9 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UserUtil userUtil;
 
     public UserResponse createUser(UserRequest request){
         if (request.role() != Role.USER && request.role() != Role.SELLER) {
@@ -58,6 +62,7 @@ public class UserService {
 
     public UserResponse getUser(String id) {
 
+        userUtil.verifyUserOwnership(id);
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
                         new UserNotFoundException(
@@ -77,6 +82,7 @@ public class UserService {
 
     public UserResponse updateUser(String id, UpdateUserRequest request) {
 
+        userUtil.verifyUserOwnership(id);
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
                         new UserNotFoundException(
@@ -107,7 +113,7 @@ public class UserService {
     }
 
     public void deleteUser(String id) {
-
+        userUtil.verifyUserOwnership(id);
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
                         new UserNotFoundException(
