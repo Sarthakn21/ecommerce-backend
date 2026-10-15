@@ -1,5 +1,7 @@
 package com.sarthak.ecommerce.common.exception;
 
+import com.sarthak.ecommerce.cart.exception.CartNotFoundException;
+import com.sarthak.ecommerce.cart.exception.InsufficientStockException;
 import com.sarthak.ecommerce.product.exception.ProductNotFoundException;
 import com.sarthak.ecommerce.user.exception.EmailAlreadyExistsException;
 import com.sarthak.ecommerce.user.exception.InvalidUserRoleException;
@@ -64,6 +66,24 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(exception.getStatus())
+                .body(exception.getMessage());
+    }
+
+    @ExceptionHandler(CartNotFoundException.class)
+    public ResponseEntity<String> handleCartNotFound(
+            CartNotFoundException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(exception.getMessage());
+    }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<String> handleInsufficientStock(
+            InsufficientStockException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
                 .body(exception.getMessage());
     }
 }
