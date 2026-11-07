@@ -1,0 +1,688 @@
+openapi: 3.0.3
+info:
+  title: E-commerce Backend API
+  version: 1.0.0
+  description: >
+    REST API for the Spring Boot and MongoDB e-commerce modular monolith.
+    Protected operations use the HttpOnly accessToken cookie set by login.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Authentication
+  - name: Products
+  - name: Reviews
+  - name: Users
+  - name: Cart
+  - name: Orders
+security:
+  - accessToken: []
+paths:
+  /api/auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already exists
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Log in and set the accessToken cookie
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful; Set-Cookie contains the HttpOnly JWT
+          headers:
+            Set-Cookie:
+              description: HttpOnly accessToken cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid credentials
+  /api/products:
+    get:
+      tags: [Products]
+      summary: Browse products
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Paginated products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageResponseProduct'
+    post:
+      tags: [Products]
+      summary: Create a product
+      description: Requires SELLER or ADMIN role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/products/search:
+    get:
+      tags: [Products]
+      summary: Search products by name
+      security: []
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Matching products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageResponseProduct'
+  /api/products/filter:
+    get:
+      tags: [Products]
+      summary: Filter products by price range
+      security: []
+      parameters:
+        - name: minPrice
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          required: true
+          schema:
+            type: number
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Filtered products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageResponseProduct'
+  /api/products/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      tags: [Products]
+      summary: Get a product by ID
+      security: []
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Products]
+      summary: Update a product
+      description: Requires SELLER or ADMIN role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Products]
+      summary: Delete a product
+      description: Requires SELLER or ADMIN role.
+      responses:
+        '204':
+          description: Product deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/reviews:
+    post:
+      tags: [Reviews]
+      summary: Add a product review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/reviews/product/{productId}:
+    get:
+      tags: [Reviews]
+      summary: Get reviews for a product
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Paginated product reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageResponseReview'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/users:
+    post:
+      tags: [Users]
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: [Users]
+      summary: List users
+      description: Requires ADMIN role.
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Users]
+      summary: Get a user
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Users]
+      summary: Update a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Users]
+      summary: Delete a user
+      responses:
+        '204':
+          description: User deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/cart:
+    get:
+      tags: [Cart]
+      summary: Get the current user's cart
+      responses:
+        '200':
+          description: Cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Cart]
+      summary: Clear the current user's cart
+      responses:
+        '204':
+          description: Cart cleared
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/cart/items/{productId}:
+    parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags: [Cart]
+      summary: Add a product to the cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemRequest'
+      responses:
+        '201':
+          description: Item added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    put:
+      tags: [Cart]
+      summary: Update cart item quantity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemRequest'
+      responses:
+        '200':
+          description: Item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+    delete:
+      tags: [Cart]
+      summary: Remove an item from the cart
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+  /api/orders:
+    post:
+      tags: [Orders]
+      summary: Place an order from the current cart
+      responses:
+        '201':
+          description: Order placed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags: [Orders]
+      summary: Get the authenticated user's order history
+      responses:
+        '200':
+          description: User's orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/orders/{orderId}:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Orders]
+      summary: Get order details
+      description: The service verifies order ownership; ADMIN can bypass the ownership check.
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/orders/{orderId}/cancel:
+    post:
+      tags: [Orders]
+      summary: Cancel an order
+      description: Orders can be cancelled while PLACED or CONFIRMED.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cancelled order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    accessToken:
+      type: apiKey
+      in: cookie
+      name: accessToken
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 10
+    Sort:
+      name: sort
+      in: query
+      description: Spring Data sort expression, e.g. price,asc
+      schema:
+        type: array
+        items:
+          type: string
+      style: form
+      explode: true
+    ProductId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Invalid request or business rule violation
+    Unauthorized:
+      description: Authentication is required
+    Forbidden:
+      description: The authenticated user is not allowed to perform this operation
+    NotFound:
+      description: Resource not found
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, format: password, minLength: 8 }
+        role: { $ref: '#/components/schemas/Role' }
+        storeName: { type: string, nullable: true }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          nullable: true
+          description: Token is set as an HttpOnly cookie; response body token is null.
+        userId: { type: string }
+        name: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+    Role:
+      type: string
+      enum: [USER, SELLER, ADMIN]
+    ProductRequest:
+      type: object
+      required: [name, description, price, category, stock]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        price: { type: number, minimum: 0.01 }
+        category: { type: string }
+        stock: { type: integer, minimum: 0 }
+        imageUrl: { type: string, nullable: true }
+    Product:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        price: { type: number }
+        category: { type: string }
+        stock: { type: integer }
+        imageUrl: { type: string, nullable: true }
+        averageRating: { type: number }
+        reviewCount: { type: integer }
+        sellerId: { type: string }
+        createdAt: { type: string, format: date-time }
+    ReviewRequest:
+      type: object
+      required: [productId, userId, rating, comment]
+      properties:
+        productId: { type: string }
+        userId: { type: string }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+    Review:
+      type: object
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        userId: { type: string }
+        rating: { type: integer }
+        comment: { type: string }
+        createdAt: { type: string, format: date-time }
+    UserRequest:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, format: password, minLength: 8 }
+        role: { $ref: '#/components/schemas/Role' }
+        storeName: { type: string, nullable: true }
+    UpdateUserRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        storeName: { type: string, nullable: true }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+        storeName: { type: string, nullable: true }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CartItemRequest:
+      type: object
+      required: [quantity]
+      properties:
+        quantity: { type: integer, minimum: 1 }
+    CartItem:
+      type: object
+      properties:
+        productId: { type: string }
+        productName: { type: string }
+        price: { type: number }
+        quantity: { type: integer }
+        subtotal: { type: number }
+    Cart:
+      type: object
+      properties:
+        cartId: { type: string }
+        userId: { type: string }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartItem' }
+        total: { type: number }
+    Order:
+      type: object
+      properties:
+        orderId: { type: string }
+        userId: { type: string }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+        total: { type: number }
+        status:
+          type: string
+          enum: [PLACED, CONFIRMED, SHIPPED, DELIVERED, CANCELLED]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    OrderItem:
+      type: object
+      properties:
+        productId: { type: string }
+        productName: { type: string }
+        price: { type: number }
+        quantity: { type: integer }
+        subtotal: { type: number }
+    PageResponseProduct:
+      type: object
+      description: Common paginated response wrapper used by product listing/search/filter.
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Product' }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+        first: { type: boolean }
+        last: { type: boolean }
+    PageResponseReview:
+      type: object
+      properties:
+        first: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Review' }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+        last: { type: boolean }
