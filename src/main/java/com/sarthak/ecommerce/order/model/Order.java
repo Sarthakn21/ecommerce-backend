@@ -3,6 +3,8 @@ package com.sarthak.ecommerce.order.model;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.FieldType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -20,6 +22,7 @@ public class Order {
 
     private List<OrderItem> items = new ArrayList<>();
 
+    @Field(targetType = FieldType.DECIMAL128)
     private BigDecimal total;
 
     private OrderStatus status;
