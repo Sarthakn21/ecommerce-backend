@@ -42,4 +42,18 @@ public class AuthController {
                 loginResponse.role()
         );
     }
+
+    @PostMapping("/logout")
+    public String logout(HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from("accessToken", "")
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        response.addHeader("Set-Cookie", cookie.toString());
+        return "Logged out successfully";
+    }
 }
