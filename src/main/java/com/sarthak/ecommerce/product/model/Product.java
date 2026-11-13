@@ -40,5 +40,8 @@ public class Product {
 
     private String sellerId;
 
+    // Missing values in existing MongoDB documents retain this default.
+    private boolean active = true;
+
     private LocalDateTime createdAt;
 }

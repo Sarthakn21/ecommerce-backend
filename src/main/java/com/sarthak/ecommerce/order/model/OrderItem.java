@@ -1,5 +1,6 @@
 package com.sarthak.ecommerce.order.model;
 
+import com.sarthak.ecommerce.order.model.OrderItemStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,7 +14,11 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class OrderItem {
 
+    private String itemId;
+
     private String productId;
+
+    private String sellerId;
 
     private String productName;
 
@@ -24,4 +29,8 @@ public class OrderItem {
 
     @Field(targetType = FieldType.DECIMAL128)
     private BigDecimal subtotal;
+
+    private OrderItemStatus status;
+
+    private String cancellationReason;
 }

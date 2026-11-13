@@ -15,71 +15,32 @@ public class SecurityConfig {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
-
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF for REST APIs
                 .csrf(csrf -> csrf.disable())
-
-                // No HTTP session; authentication will be handled using JWT
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
-                )
-                .addFilterBefore(
-                        jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
-                // Authorization rules
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-
-                        // Swagger UI and OpenAPI specification are public
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/openapi.yaml").permitAll()
-
-                        // Authentication APIs are public
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html",
+                                "/v3/api-docs/**", "/openapi.yaml").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-
-                        // Anyone can browse products
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-
-                        // Only sellers and admins can create products
                         .requestMatchers(HttpMethod.POST, "/api/products/**")
                         .hasAnyRole("SELLER", "ADMIN")
-
-                        // Only sellers and admins can update products
                         .requestMatchers(HttpMethod.PUT, "/api/products/**")
                         .hasAnyRole("SELLER", "ADMIN")
-
-                        // Only sellers and admins can delete products
                         .requestMatchers(HttpMethod.DELETE, "/api/products/**")
                         .hasAnyRole("SELLER", "ADMIN")
-
-                        // Only admins can see all users
-                        .requestMatchers(HttpMethod.GET, "/api/users")
-                        .hasRole("ADMIN")
-
-                        // Authenticated users can access a specific user
-                        .requestMatchers(HttpMethod.GET, "/api/users/**")
-                        .authenticated()
-
-                        // Authenticated users can update a specific user
-                        .requestMatchers(HttpMethod.PUT, "/api/users/**")
-                        .authenticated()
-
-                        // Authenticated users can delete a specific user
-                        .requestMatchers(HttpMethod.DELETE, "/api/users/**")
-                        .authenticated()
-
-                        .requestMatchers("/api/cart/**")
-                        .hasAnyRole("USER", "SELLER")
-
+                        .requestMatchers("/api/seller/**").hasRole("SELLER")
+                        .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/users/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated()
+                        .requestMatchers("/api/cart/**").hasAnyRole("USER", "SELLER")
                         .anyRequest().authenticated()
-
-
                 );
-
         return http.build();
     }
 }

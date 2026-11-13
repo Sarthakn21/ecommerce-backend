@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class ProductService {
@@ -24,7 +25,83 @@ public class ProductService {
     private ProductUtil productUtil;
 
     public PageResponse<ProductResponse> getAllProducts(Pageable pageable) {
-        Page<Product> productPage = productRepository.findAll(pageable);
+        return toPageResponse(productRepository.findAvailableProducts(pageable));
+    }
+
+    public ProductResponse getProductById(String id) {
+        Product product = productRepository.findById(id)
+                .filter(Product::isActive)
+                .orElseThrow(() -> new ProductNotFoundException(id));
+        return mapToResponse(product);
+    }
+
+    public ProductResponse createProduct(ProductRequest request) {
+        Product product = new Product();
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setCategory(request.getCategory());
+        product.setStock(request.getStock());
+        product.setImageUrl(request.getImageUrl());
+        product.setAverageRating(BigDecimal.ZERO);
+        product.setReviewCount(0);
+        product.setActive(true);
+        if (!productUtil.isAdmin()) {
+            product.setSellerId(productUtil.getAuthenticatedUserId());
+        }
+        product.setCreatedAt(LocalDateTime.now());
+        return mapToResponse(productRepository.save(product));
+    }
+
+    public ProductResponse updateProduct(String id, ProductRequest request) {
+        Product oldProduct = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(id));
+        productUtil.verifyProductOwnership(oldProduct);
+        oldProduct.setName(request.getName());
+        oldProduct.setDescription(request.getDescription());
+        oldProduct.setPrice(request.getPrice());
+        oldProduct.setImageUrl(request.getImageUrl());
+        oldProduct.setStock(request.getStock());
+        oldProduct.setCategory(request.getCategory());
+        return mapToResponse(productRepository.save(oldProduct));
+    }
+
+    public String deleteProduct(String id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(id));
+        productUtil.verifyProductOwnership(product);
+        productRepository.delete(product);
+        return "Product with id " + id + " deleted successfully";
+    }
+
+    public List<ProductResponse> getMyProducts() {
+        String sellerId = productUtil.getAuthenticatedUserId();
+        return productRepository.findBySellerIdOrderByCreatedAtDesc(sellerId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public ProductResponse deactivateProduct(String id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(id));
+        productUtil.verifyProductOwnership(product);
+        product.setActive(false);
+        return mapToResponse(productRepository.save(product));
+    }
+
+    public PageResponse<ProductResponse> searchProducts(String name, Pageable pageable) {
+        return toPageResponse(productRepository.searchAvailableProducts(
+                java.util.regex.Pattern.quote(name), pageable));
+    }
+
+    public PageResponse<ProductResponse> getFilteredProducts(
+            BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+        return toPageResponse(productRepository.findAvailableProductsByPrice(
+                minPrice, maxPrice, pageable));
+    }
+
+    private PageResponse<ProductResponse> toPageResponse(Page<Product> productPage) {
         Page<ProductResponse> responsePage = productPage.map(this::mapToResponse);
         return new PageResponse<>(
                 responsePage.getNumber(),
@@ -37,60 +114,8 @@ public class ProductService {
         );
     }
 
-    public ProductResponse getProductById(String id){
-        Product product= productRepository.findById(id).orElseThrow(()->new ProductNotFoundException(id));
-        return mapToResponse(product);
-    }
-
-    public ProductResponse createProduct(ProductRequest request){
-        Product product = new Product();
-
-        product.setName(request.getName());
-        product.setDescription(request.getDescription());
-        product.setPrice(request.getPrice());
-        product.setCategory(request.getCategory());
-        product.setStock(request.getStock());
-        product.setImageUrl(request.getImageUrl());
-        product.setAverageRating(BigDecimal.ZERO);
-        product.setReviewCount(0);
-        if (!productUtil.isAdmin()) {
-            product.setSellerId(productUtil.getAuthenticatedUserId());
-        }
-        product.setCreatedAt(LocalDateTime.now());
-        Product savedProduct = productRepository.save(product);
-
-        return mapToResponse(savedProduct);
-    }
-
-    public ProductResponse updateProduct(String id, ProductRequest request){
-        Product oldProduct = productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException(id));
-
-        productUtil.verifyProductOwnership(oldProduct);
-
-        oldProduct.setName(request.getName());
-        oldProduct.setDescription(request.getDescription());
-        oldProduct.setPrice(request.getPrice());
-        oldProduct.setImageUrl(request.getImageUrl());
-        oldProduct.setStock(request.getStock());
-        oldProduct.setCategory(request.getCategory());
-
-        Product updatdeProduct = productRepository.save(oldProduct);
-
-        return mapToResponse(updatdeProduct);
-    }
-
-    public String deleteProduct(String id){
-
-        Product product = productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException(id));
-        productUtil.verifyProductOwnership(product);
-        productRepository.delete(product);
-        return "Product with id "+id+" deleted successfully";
-    }
     private ProductResponse mapToResponse(Product product) {
-
         ProductResponse response = new ProductResponse();
-
         response.setId(product.getId());
         response.setName(product.getName());
         response.setDescription(product.getDescription());
@@ -101,35 +126,8 @@ public class ProductService {
         response.setAverageRating(product.getAverageRating());
         response.setReviewCount(product.getReviewCount());
         response.setSellerId(product.getSellerId());
+        response.setActive(product.isActive());
         response.setCreatedAt(product.getCreatedAt());
-
         return response;
     }
-
-    public PageResponse<ProductResponse> searchProducts(String name, Pageable pageable) {
-        Page<Product> productPage = productRepository.findByNameContainingIgnoreCase(name, pageable);
-        Page<ProductResponse> responsePage = productPage.map(this::mapToResponse);
-        return new PageResponse<>(responsePage.getNumber(),
-                responsePage.getSize(),
-                responsePage.getTotalElements(),
-                responsePage.getTotalPages(),
-                responsePage.isFirst(),
-                responsePage.isLast(),
-                responsePage.getContent());
-    }
-
-    public PageResponse<ProductResponse> getFilteredProducts(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
-        Page<Product> productPage = productRepository.findByPriceBetween(minPrice, maxPrice,pageable);
-        Page<ProductResponse> responsePage = productPage.map(this::mapToResponse);
-        return new PageResponse<>(responsePage.getNumber(),
-                responsePage.getSize(),
-                responsePage.getTotalElements(),
-                responsePage.getTotalPages(),
-                responsePage.isFirst(),
-                responsePage.isLast(),
-                responsePage.getContent());
-
-    }
-
-
 }
